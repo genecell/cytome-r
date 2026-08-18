@@ -1,0 +1,19 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$
+^\.github$
+^tools/prepare_release\.R$
+^cran-comments\.md$
+^src/Makevars$
+^src/.*\.o$
+^src/.*\.so$
+^src/.*\.dll$
+^conftest.*$
+# Not yet a real vignette: vignettes/ currently holds a plain .md, which R CMD
+# build rejects because there is no VignetteBuilder for it. Converting it to
+# .Rmd and adding `VignetteBuilder: knitr` is the fix; ignoring it keeps the
+# build clean until then.
+^vignettes$
+^cytome\.Rcheck$
+^cytome_.*\.tar\.gz$
+^cytome-manual\.tex$

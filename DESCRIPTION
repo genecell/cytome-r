@@ -1,0 +1,37 @@
+Package: cytome
+Type: Package
+Title: Native R Reader and Streaming Interface for the Cytome Single-Cell Store
+Version: 0.1.0
+Authors@R: c(
+    person("Min", "Dai", role = c("aut", "cre"), email = "dai@broadinstitute.org"),
+    person("PIASO Team", role = "cph"))
+Description: Reads .cytome files - a SQLite-backed single-cell store - natively in R with
+    zero Python dependency. A .cytome is a plain SQLite database, so the structural data
+    (cells / genes / peaks, embeddings, graphs, fragments) is read with DBI; the chunked,
+    compressed CSR count matrices are decoded via a small Rcpp layer (lz4-block / zstd / zlib).
+    Constructs a SingleCellExperiment or a Seurat object, and provides cytome-native chunk
+    streaming for out-of-core analysis without loading the full matrix.
+License: MIT + file LICENSE
+URL: https://github.com/genecell/cytome-r, https://piaso.org
+BugReports: https://github.com/genecell/cytome-r/issues
+Encoding: UTF-8
+Depends:
+    R (>= 4.1)
+Imports:
+    DBI,
+    RSQLite,
+    Matrix,
+    Rcpp,
+    methods
+LinkingTo: Rcpp
+Suggests:
+    SingleCellExperiment,
+    SummarizedExperiment,
+    DelayedArray,
+    S4Arrays,
+    SparseArray,
+    S4Vectors,
+    SeuratObject,
+    testthat (>= 3.0.0)
+SystemRequirements: liblz4, libzstd, zlib
+Config/roxygen2/version: 8.1.0

@@ -1,0 +1,14 @@
+*.o
+*.so
+*.Rcheck/
+src/*.o
+src/*.so
+inst/doc/
+.Rhistory
+.RData
+cytome.Rcheck/
+cytome_*.tar.gz
+cytome-manual.tex
+src/Makevars
+src/*.o
+src/*.so

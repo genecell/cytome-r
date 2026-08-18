@@ -1,0 +1,3 @@
+# GENERATED from src/Makevars.in by ./configure -- do not edit src/Makevars.
+PKG_CPPFLAGS = @cytome_cflags@
+PKG_LIBS = @cytome_libs@

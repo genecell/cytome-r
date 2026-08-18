@@ -1,0 +1,80 @@
+# The check the development machine cannot run: three OSes, a real toolchain.
+# "builds where it was written" is exactly the property the release removes.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+name: R-CMD-check
+
+jobs:
+  R-CMD-check:
+    runs-on: ${{ matrix.config.os }}
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
+          - {os: macos-latest,   r: 'release'}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+    steps:
+      - uses: actions/checkout@v4
+
+      # The codecs a .cytome is compressed with. configure looks for these via
+      # pkg-config; without them it stops with install instructions rather than
+      # failing part-way through compiling.
+      - name: System libraries (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y liblz4-dev libzstd-dev zlib1g-dev
+      - name: System libraries (macOS)
+        if: runner.os == 'macOS'
+        run: brew install lz4 zstd
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck, any::roxygen2
+          needs: check
+
+      # man/ is generated, not committed: the roxygen comments are the source.
+      - name: Document
+        run: roxygen2::roxygenise()
+        shell: Rscript {0}
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+
+  conformance:
+    runs-on: ubuntu-latest
+    name: cross-language conformance
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y liblz4-dev libzstd-dev zlib1g-dev
+      - uses: r-lib/actions/setup-r@v2
+        with: {use-public-rspm: true}
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with: {needs: check}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install both implementations
+        run: |
+          R CMD INSTALL .
+          pip install cytome
+      # Forward: a cytome written by Python must read in R (tests/testthat).
+      # Reverse: a cytome written by R must read in Python -- the direction
+      # that was missing, and the one that would have caught the dropped
+      # ATAC assay.
+      - name: Reverse conformance
+        run: |
+          Rscript tools/write_conformance.R /tmp/from_r.cytome
+          python tools/reverse_conformance.py /tmp/from_r.cytome inst/extdata

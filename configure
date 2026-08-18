@@ -1,0 +1,74 @@
+#!/bin/sh
+# Find liblz4 / libzstd / zlib, in this order of preference:
+#
+#   1. CYTOME_CFLAGS / CYTOME_LIBS from the environment  (explicit override)
+#   2. pkg-config
+#   3. bare -llz4 -lzstd -lz, tested by actually compiling
+#
+# The previous Makevars hard-coded $(CONDA_PREFIX), so the package built in
+# exactly one conda environment and nowhere else: off conda that expands to
+# empty and the flags become "-I/include -L/lib".
+
+PKG_CONFIG=${PKG_CONFIG:-pkg-config}
+CFLAGS_FOUND=""
+LIBS_FOUND=""
+
+if [ -n "${CYTOME_LIBS}" ]; then
+  CFLAGS_FOUND="${CYTOME_CFLAGS}"
+  LIBS_FOUND="${CYTOME_LIBS}"
+  echo "cytome: using CYTOME_CFLAGS / CYTOME_LIBS from the environment"
+elif "${PKG_CONFIG}" --exists liblz4 libzstd zlib 2>/dev/null; then
+  CFLAGS_FOUND=`"${PKG_CONFIG}" --cflags liblz4 libzstd zlib`
+  LIBS_FOUND=`"${PKG_CONFIG}" --libs liblz4 libzstd zlib`
+  echo "cytome: found liblz4 / libzstd / zlib via pkg-config"
+else
+  CFLAGS_FOUND=""
+  LIBS_FOUND="-llz4 -lzstd -lz"
+  echo "cytome: pkg-config found nothing; trying the default library path"
+fi
+
+# Do not take the flags on trust -- pkg-config can name a library that is not
+# actually linkable, and the failure then lands in the middle of compiling the
+# package with a much worse error message.
+# Respect a CC already in the environment, as autoconf does; otherwise ask R
+# which compiler it will actually use to build the package.
+CC=${CC:-`"${R_HOME}/bin/R" CMD config CC`}
+CPPFLAGS=${CPPFLAGS:-`"${R_HOME}/bin/R" CMD config CPPFLAGS`}
+cat > conftest.c <<'TESTEOF'
+#include <lz4.h>
+#include <zstd.h>
+#include <zlib.h>
+int main(void) {
+    (void) LZ4_versionNumber();
+    (void) ZSTD_versionNumber();
+    (void) zlibVersion();
+    return 0;
+}
+TESTEOF
+
+if ! ${CC} ${CPPFLAGS} ${CFLAGS_FOUND} conftest.c ${LIBS_FOUND} -o conftest >conftest.log 2>&1; then
+  cat conftest.log
+  rm -f conftest conftest.c conftest.log
+  echo "-------------------------- [ cytome ] --------------------------"
+  echo "Could not compile and link against lz4, zstd and zlib."
+  echo ""
+  echo "These are the codecs a .cytome file is compressed with, so they are"
+  echo "required, not optional. Install the development packages:"
+  echo ""
+  echo "  Debian / Ubuntu : apt-get install liblz4-dev libzstd-dev zlib1g-dev"
+  echo "  Fedora / RHEL   : dnf install lz4-devel libzstd-devel zlib-devel"
+  echo "  macOS (brew)    : brew install lz4 zstd"
+  echo "  conda           : conda install -c conda-forge lz4-c zstd zlib"
+  echo ""
+  echo "If they are installed somewhere pkg-config cannot see, set both:"
+  echo "  CYTOME_CFLAGS='-I/path/include' CYTOME_LIBS='-L/path/lib -llz4 -lzstd -lz'"
+  echo "----------------------------------------------------------------"
+  exit 1
+fi
+rm -f conftest conftest.c conftest.log
+
+sed -e "s|@cytome_cflags@|${CFLAGS_FOUND}|" \
+    -e "s|@cytome_libs@|${LIBS_FOUND}|" \
+    src/Makevars.in > src/Makevars
+echo "cytome: wrote src/Makevars"
+exit 0
