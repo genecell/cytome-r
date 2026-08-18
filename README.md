@@ -160,3 +160,12 @@ bit-for-bit — both codecs, zstd for RNA and lz4 for ATAC. CI runs the reverse
 too: a file written by R, read back by Python, compared against the same
 expectations. For two implementations of one format, testing only one
 direction leaves the other free to rot.
+
+## Development
+
+`cytome` and the PIASO ecosystem are developed in the
+**[Gord Fishell Laboratory](https://fishelllab.hms.harvard.edu)** at Harvard
+Medical School and the Broad Institute.
+
+Maintainer: Min Dai (<dai@broadinstitute.org>). Issues and feature requests:
+<https://github.com/genecell/cytome-r/issues>.
