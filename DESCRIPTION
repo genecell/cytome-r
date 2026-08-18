@@ -11,6 +11,7 @@ Description: Reads .cytome files - a SQLite-backed single-cell store - natively 
     compressed CSR count matrices are decoded via a small Rcpp layer (lz4-block / zstd / zlib).
     Constructs a SingleCellExperiment or a Seurat object, and provides cytome-native chunk
     streaming for out-of-core analysis without loading the full matrix.
+    Part of the PIASO toolkit for single-cell omics (<https://piaso.org>).
 License: MIT + file LICENSE
 URL: https://github.com/genecell/cytome-r, https://piaso.org
 BugReports: https://github.com/genecell/cytome-r/issues
