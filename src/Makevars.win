@@ -1,0 +1,7 @@
+# Windows: R does not run ./configure (that is unix-only; Windows would need
+# configure.win), so src/Makevars is never generated from Makevars.in here and
+# the link line for the codecs never existed -- every Windows CRAN/r-universe
+# target failed at link time while unix passed. Rtools >= 4.2 ships static
+# liblz4, libzstd and zlib in its toolchain, so a static Makevars.win is all
+# that is needed.
+PKG_LIBS = -llz4 -lzstd -lz
