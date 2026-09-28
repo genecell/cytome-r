@@ -13,6 +13,8 @@ cytome_graphs(x)
 A character vector of graph names.
 }
 \description{
-Reads the `graph_edges` table -- the same table the Python package writes,
-so a KNN graph built on either side is readable from the other.
+Lists the cell-by-cell graphs of a store, in either form the Python package
+writes: compressed row chunks (`graph_meta` / `graph_chunks`, cytome 0.3.6
+and later), and one row per edge (`graph_edges`, earlier versions and this
+package's own writer).
 }

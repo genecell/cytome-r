@@ -1,3 +1,14 @@
+# cytome 0.1.1
+
+* **Graphs written by the Python package from cytome 0.3.6 are read.** Python
+  cytome 0.3.6 stores graphs as compressed row chunks (`graph_meta`,
+  `graph_chunks`) instead of one row per edge. 0.1.0 read only the per-edge
+  `graph_edges` table, so on such a store `cytome_graphs()` was empty and
+  `read_cytome()` returned a `SingleCellExperiment` or `Seurat` object without
+  its neighbour graphs, with no error. `cytome_graphs()` now lists both forms
+  and `cytome_graph()` reads both, keeping the stored shape. Graphs written
+  from R, or by Python before 0.3.6, read as before.
+
 # cytome 0.1.0
 
 First release.

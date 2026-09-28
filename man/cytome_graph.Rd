@@ -11,7 +11,8 @@ cytome_graph(x, name, n = NULL)
 
 \item{name}{Graph name, from [cytome_graphs()].}
 
-\item{n}{Square dimension; defaults to the cell count.}
+\item{n}{Square dimension; defaults to the stored shape, or the cell count
+for a graph stored one row per edge.}
 }
 \value{
 A [Matrix::dgCMatrix-class], cells x cells.
