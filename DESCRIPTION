@@ -1,7 +1,7 @@
 Package: cytome
 Type: Package
 Title: Native R Reader and Streaming Interface for the Cytome Single-Cell Store
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(
     person("Min", "Dai", role = c("aut", "cre"), email = "dai@broadinstitute.org"),
     person("PIASO Team", role = "cph"))

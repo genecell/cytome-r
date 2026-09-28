@@ -1,3 +1,14 @@
+# cytome 0.1.2
+
+* **Stores written without the Python `zstandard` package are read.** Without
+  that optional package, the Python writer compresses with zlib but still labels
+  each blob `zstd`. The Python reader decides by the bytes; this package trusted
+  the label and failed with "zstd frame content size unknown". A blob labelled
+  `zstd` is now decoded as what its bytes are (zstd, zlib or lz4), exactly as in
+  Python; `lz4` and `zlib` labels are trusted, as there. A zstd frame that does
+  not record its size is decoded in steps instead of refused, and a blob stored
+  uncompressed (`none`) passes through.
+
 # cytome 0.1.1
 
 * **Graphs written by the Python package from cytome 0.3.6 are read.** Python
