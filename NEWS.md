@@ -1,3 +1,12 @@
+# cytome 0.1.3
+
+* **The tests pass on arm64 macOS and Windows.** A test compared a float64
+  graph with values read from a decimal CSV, exactly. Where R parses decimals
+  without extended precision, some values came out one unit in the last place
+  apart, so the check failed and no binary was built for those platforms. The
+  expected values are now hex floats, which R parses exactly everywhere. The
+  package code is unchanged from 0.1.2.
+
 # cytome 0.1.2
 
 * **Stores written without the Python `zstandard` package are read.** Without

@@ -28,6 +28,8 @@ print("chunks per graph:", con.execute("SELECT graph_name, n_chunks, dtype FROM 
 con.execute("PRAGMA wal_checkpoint(TRUNCATE)"); con.execute("PRAGMA journal_mode=DELETE"); con.execute("VACUUM"); con.close()
 for name, M in (("connectivities", G.astype(np.float32)), ("distances", G)):
     t = M.tocoo()
-    pd.DataFrame({"i": t.row + 1, "j": t.col + 1, "x": t.data.astype(np.float64)}).to_csv(
-        f"inst/extdata/expected_graph_{name}.csv", index=False, float_format="%.17g")
+    # hex floats: R parses them exactly on every platform; a 17-digit decimal
+    # can land one ulp off where R has no extended precision (arm64 macOS, Windows)
+    pd.DataFrame({"i": t.row + 1, "j": t.col + 1, "x": [float(v).hex() for v in t.data.astype(np.float64)]}).to_csv(
+        f"inst/extdata/expected_graph_{name}.csv", index=False)
 print("cytome", cytome.__version__, "->", OUT, os.path.getsize(OUT), "bytes")

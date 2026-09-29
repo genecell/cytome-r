@@ -8,9 +8,11 @@
 .fixture <- function() system.file("extdata", "graph_chunks.cytome", package = "cytome")
 
 .expected <- function(name, n = 60L) {
+  # values are hex floats, which R parses exactly on every platform
   e <- utils::read.csv(system.file("extdata", paste0("expected_graph_", name, ".csv"),
-                                   package = "cytome"))
-  Matrix::sparseMatrix(i = e$i, j = e$j, x = e$x, dims = c(n, n))
+                                   package = "cytome"),
+                       colClasses = c("integer", "integer", "character"))
+  Matrix::sparseMatrix(i = e$i, j = e$j, x = as.numeric(e$x), dims = c(n, n))
 }
 
 test_that("chunked graphs are listed", {
