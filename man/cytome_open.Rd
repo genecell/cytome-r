@@ -13,5 +13,10 @@ cytome_open(path)
 A `cytome` handle (a list with the open DBI connection). Close with [cytome_close()].
 }
 \description{
-Open a .cytome file (read-only)
+Nothing is written, to the file or to its folder beyond the `-wal` and `-shm` files SQLite
+keeps beside a store in WAL mode where the folder lets it. A store in WAL mode in a folder
+that is not writable (an installed package, a read-only share) is opened immutable when its
+WAL holds nothing, which needs no `-shm`; when its WAL still holds committed changes it
+cannot be read there, and the error says so. As in the Python package, readers wait up to
+60 s for a writer's lock instead of failing at once.
 }

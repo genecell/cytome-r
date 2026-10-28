@@ -26,10 +26,13 @@
 
 \item{assay}{Assay to store as the main counts matrix (default `"counts"`).}
 
-\item{main_modality}{Modality name for the main assay (default `"RNA"`).}
+\item{main_modality}{Modality name for the main assay (default `"RNA"`; also
+`"ATAC"`, `"GA"` or `"tiles"`).}
 
 \item{alt_modalities}{`altExp` names to write as extra modalities. `NULL`
-(default) writes all of them; `character(0)` writes none.}
+(default) writes every one cytome has a feature table for (RNA, GA, ATAC,
+tiles) and names the others (ERCC, ADT, ...) in a warning; naming one that
+cannot be written is an error. `character(0)` writes none.}
 
 \item{layers}{Additional assays of the main experiment to carry.
 `FALSE` (default) writes none, `TRUE` writes all, or name them. Off by
@@ -37,11 +40,12 @@ default because normalized values are recomputable from the counts and
 cost more space than the counts do; turn it on when the point is to hand
 somebody your object rather than to archive the measurements.}
 
-\item{graphs}{Write `colPairs` to the shared `graph_edges` table
+\item{graphs}{Write `colPairs` as the Python package stores graphs
 (default `TRUE`). A neighbour graph is the expensive thing to recompute,
 and carrying it means the recipient reproduces the same clusters.}
 
-\item{dtype}{`"float32"` (default) or `"float64"`.}
+\item{dtype}{`"float32"` (default), `"float64"`, or `"int32"` (whole numbers
+only; an error otherwise).}
 
 \item{chunk_size}{Rows (cells) per storage chunk.}
 

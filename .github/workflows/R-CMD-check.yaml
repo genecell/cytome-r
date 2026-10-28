@@ -69,11 +69,16 @@ jobs:
       - name: Install both implementations
         run: |
           R CMD INSTALL .
-          pip install cytome
-      # Forward: a cytome written by Python must read in R (tests/testthat).
-      # Reverse: a cytome written by R must read in Python -- the direction
-      # that was missing, and the one that would have caught the dropped
-      # ATAC assay.
+          pip install cytome anndata
+      # Forward: a cytome written by Python must read in R (tests/testthat,
+      # with stores written by Python and by PIASO's importer in
+      # tests/testthat/fixtures). Reverse: a cytome written by R must read in
+      # Python -- the direction that was missing, and the one that would have
+      # caught the dropped ATAC assay. test-python.R runs only where Python
+      # with cytome is found, which here it is.
+      - name: Both directions through testthat
+        run: |
+          CYTOME_PYTHON=$(which python) Rscript -e 'testthat::test_dir("tests/testthat", package = "cytome", load_package = "installed", filter = "python", stop_on_failure = TRUE)'
       - name: Reverse conformance
         run: |
           Rscript tools/write_conformance.R /tmp/from_r.cytome

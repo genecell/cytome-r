@@ -45,8 +45,8 @@ test_that("read_cytome(delayed = TRUE) gives an SCE whose assay is on disk", {
 
 test_that("only the chunks overlapping the request are selected", {
   cm <- data.frame(chunk_idx = 0:3,
-                   row_start = c(0L, 10L, 20L, 30L),
-                   row_end   = c(10L, 20L, 30L, 40L))
+                   start = c(0L, 10L, 20L, 30L),       # 0-based, end exclusive
+                   end   = c(10L, 20L, 30L, 40L))
   expect_equal(cytome:::.cytome_chunks_for(cm, 1:10), 0L)          # first chunk only
   expect_equal(cytome:::.cytome_chunks_for(cm, 11L), 1L)           # boundary, low side
   expect_equal(cytome:::.cytome_chunks_for(cm, 20L), 1L)           # boundary, high side
@@ -68,7 +68,7 @@ test_that("a multi-chunk matrix reads back identically through the seed", {
   write_cytome(sce, p, chunk_size = 10L)                 # -> 6 chunks
 
   x <- cytome_open(p); on.exit(cytome_close(x))
-  expect_gt(nrow(cytome:::.chunk_meta(x, "RNA_counts")), 1L)   # really multi-chunk
+  expect_gt(nrow(cytome:::.chunk_index(x, cytome:::.matrix_info(x, "RNA_counts"))), 1L)   # really multi-chunk
 
   d <- cytome_delayed(p, "RNA_counts")
   M <- read_cytome_matrix(x, "RNA_counts")
@@ -82,4 +82,23 @@ test_that("a multi-chunk matrix reads back identically through the seed", {
   }
   expect_equal(unname(as.numeric(DelayedArray::colSums(d))),
                unname(as.numeric(Matrix::colSums(M))), tolerance = 1e-6)
+})
+
+# The seed used to grow its output with c() once per requested cell, so one block of n cells
+# cost O(n^2): 47 s for 8,000 cells of 2,000 genes. It is now linear in the values read
+# (0.15 s there). A generous bound, so that only the quadratic form fails it.
+test_that("a delayed block is assembled in time linear in its values", {
+  skip_on_cran()
+  skip_if_not_installed("DelayedArray")
+  skip_if_not_installed("SingleCellExperiment")
+  set.seed(4)
+  m <- Matrix::rsparsematrix(300, 8000, density = 0.1, rand.x = function(n) rpois(n, 2) + 1)
+  dimnames(m) <- list(paste0("g", 1:300), paste0("c", 1:8000))
+  p <- tempfile(fileext = ".cytome")
+  write_cytome(SingleCellExperiment::SingleCellExperiment(assays = list(counts = m)), p,
+               chunk_size = 8000L)
+  seed <- cytome_delayed(p, "RNA_counts")@seed
+  t <- system.time(B <- cytome:::.cytome_seed_extract(seed, list(NULL, seq_len(8000))))[["elapsed"]]
+  expect_equal(unname(as.matrix(B)), unname(as.matrix(m)))
+  expect_lt(t, 3)
 })

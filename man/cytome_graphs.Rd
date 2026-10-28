@@ -13,8 +13,9 @@ cytome_graphs(x)
 A character vector of graph names.
 }
 \description{
-Lists the cell-by-cell graphs of a store, in either form the Python package
+Lists the cell-by-cell graphs of a store, in every form the Python package
 writes: compressed row chunks (`graph_meta` / `graph_chunks`, cytome 0.3.6
-and later), and one row per edge (`graph_edges`, earlier versions and this
-package's own writer).
+and later), one row per edge (`graph_edges`, earlier versions and the R
+writer before cytome R 0.1.4), and the legacy `graph_knn` table (as `"knn"`).
+Graphs over features (`axis = 'var'`) are not listed.
 }

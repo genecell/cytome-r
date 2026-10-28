@@ -17,7 +17,9 @@ read_cytome_matrix(x, name, features_x_cells = TRUE)
 A [Matrix::dgCMatrix-class].
 }
 \description{
-Reconstructs the chunked, compressed CSR matrix (stored cells x features) and returns it,
-by default transposed to **features x cells** (the orientation of an assay in
-SingleCellExperiment / Seurat).
+Reconstructs the chunked, compressed matrix (stored cells x features) and returns it, by
+default transposed to **features x cells** (the orientation of an assay in
+SingleCellExperiment / Seurat). Both storage layouts are read: row-major chunks of cells
+(the Python writers) and column-major chunks of features (PIASO's importer and quantifier,
+for ATAC peaks and tiles).
 }

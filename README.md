@@ -5,7 +5,7 @@ store.**
 
 A `.cytome` file is a plain **SQLite** database, so R reads it directly with
 **no Python dependency**: the relational tables (cells, genes, peaks,
-embeddings, graphs) through `DBI`, and the chunked, compressed CSR count
+embeddings, graphs) through `DBI`, and the chunked, compressed count
 matrices through a small Rcpp layer (lz4-block / zstd / zlib). It builds a
 **SingleCellExperiment** or a **Seurat** object, writes either one back out,
 and streams the matrix in chunks for work that must not load it whole.
@@ -32,9 +32,11 @@ object or a SingleCellExperiment, use the tools you already use. Datasets are
 | | Python `cytome` | R `cytome` |
 |---|---|---|
 | read a `.cytome` | yes | yes |
-| write a `.cytome` | yes | yes — `write_cytome()`, RNA and ATAC modalities |
+| write a `.cytome` | yes | yes — `write_cytome()`: RNA, ATAC, GA and tiles modalities; it never stores values that were not measured, so an assay, layer or graph over only some genes or cells (a `scale.data` over the variable genes) is left out with a warning |
 | normalized layers | yes | yes — `layers = TRUE` (off by default) |
-| graphs / KNN | yes | yes — via the shared `graph_edges` table |
+| graphs / KNN | yes | yes — stored as the Python package stores them |
+| column-major ATAC / tiles matrices (PIASO's importer) | yes | yes — read, streamed `along = "features"`, delayed |
+| fragments (compressed chunks or per-row tables) | yes | yes — `cytome_fragments()` |
 | convert to an in-memory object | AnnData | Seurat, SingleCellExperiment |
 | chunked streaming | yes | yes — `cytome_stream()` |
 | out-of-core matrix | yes | `cytome_delayed()` / `read_cytome(delayed = TRUE)`, chunk-aligned |

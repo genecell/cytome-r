@@ -4,19 +4,29 @@
 \alias{cytome_stream}
 \title{Stream a cytome matrix chunk-by-chunk (cytome-native, out-of-core)}
 \usage{
-cytome_stream(x, name, FUN, features_x_cells = FALSE, ...)
+cytome_stream(
+  x,
+  name,
+  FUN,
+  features_x_cells = FALSE,
+  ...,
+  along = c("cells", "features")
+)
 }
 \arguments{
 \item{x}{A `cytome` handle.}
 
 \item{name}{Matrix name, e.g. `"RNA_counts"`.}
 
-\item{FUN}{A function called per chunk as `FUN(mat, row_start, row_end, chunk_idx, ...)`,
-where `mat` is the chunk's sparse sub-matrix.}
+\item{FUN}{A function called per chunk as `FUN(mat, start, end, chunk_idx, ...)`, where
+`mat` is the chunk's sparse sub-matrix and `start`, `end` its 0-based, end-exclusive
+range of cells (`along = "cells"`) or of features (`along = "features"`).}
 
 \item{features_x_cells}{If `TRUE` each chunk is features x cells; else cells x features (default).}
 
 \item{...}{Extra arguments passed to `FUN`.}
+
+\item{along}{`"cells"` (default) or `"features"`: the axis the stored chunks run along.}
 }
 \value{
 A list of the per-chunk return values of `FUN` (reduce as you wish).
@@ -27,11 +37,19 @@ sub-matrix and passing it to `FUN` — so you can compute over a matrix far larg
 without ever materialising the whole thing, directly from the cytome format (no BPCells or
 other backend required). This is the foundation for R-side streaming single-cell analysis.
 }
+\details{
+A matrix is stored either by cells (row chunks, the layout of the Python writers) or by
+features (column chunks, the default of PIASO's importer and quantifier for ATAC peaks and
+tiles). `along` says which chunks to stream: `"cells"` passes blocks of cells with every
+feature, `"features"` blocks of features with every cell. A matrix streams only along the
+chunks it has; asking for the other axis is an error that says so, never an empty result.
+}
 \examples{
-\dontrun{
-x <- cytome_open("data.cytome")
-# per-cell total counts without loading the whole matrix:
-totals <- cytome_stream(x, "RNA_counts", function(m, s, e, i) Matrix::rowSums(m))
-totals <- unlist(totals)
+ref <- system.file("extdata", "reference.cytome", package = "cytome")
+if (nzchar(ref)) {
+  x <- cytome_open(ref)
+  # per-cell total counts without loading the whole matrix:
+  totals <- unlist(cytome_stream(x, "RNA_counts", function(m, s, e, i) Matrix::rowSums(m)))
+  cytome_close(x)
 }
 }

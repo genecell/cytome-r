@@ -9,3 +9,32 @@ cytome_compress <- function(blob, method) {
     .Call(`_cytome_cytome_compress`, blob, method)
 }
 
+#' Values of a blob, as doubles
+#' @noRd
+cytome_decode_values <- function(blob, compression, dtype, n = -1, what = "blob") {
+    .Call(`_cytome_cytome_decode_values`, blob, compression, dtype, n, what)
+}
+
+#' Indices of a blob (int32 or int64 by its length), each in [0, upper)
+#' @noRd
+cytome_decode_index <- function(blob, compression, n, upper, what = "index blob") {
+    .Call(`_cytome_cytome_decode_index`, blob, compression, n, upper, what)
+}
+
+#' One compressed sparse chunk: `n_major` rows (CSR) or columns (CSC) whose
+#' entries index `n_minor` columns or rows. Returns the chunk-local pointer
+#' `p` (length n_major + 1, from 0), the 0-based minor indices `i` and the
+#' values `x`, after checking that the three arrays agree.
+#' @noRd
+cytome_decode_sparse <- function(data, indices, indptr, compression, dtype, n_major, n_minor, what = "chunk") {
+    .Call(`_cytome_cytome_decode_sparse`, data, indices, indptr, compression, dtype, n_major, n_minor, what)
+}
+
+#' One fragment chunk: starts (encoding 1: deltas from the previous start, the
+#' first from 0), ends (encoding 1: lengths) and cells, all int32. The cells
+#' are checked against the cells table by the caller.
+#' @noRd
+cytome_decode_fragments <- function(starts, ends, cells, compression, encoding, what = "fragment chunk") {
+    .Call(`_cytome_cytome_decode_fragments`, starts, ends, cells, compression, encoding, what)
+}
+

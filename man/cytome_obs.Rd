@@ -15,5 +15,7 @@ cytome_obs(x, entity = "cells")
 A data.frame.
 }
 \description{
-Read an entity table (cells / genes / peaks / tiles / samples) as a data.frame
+Rows come in their stored order, column names as stored, and each column in the type its
+writer recorded (`_column_meta`): a categorical as a factor with its levels in order, a
+boolean as logical, an integer as integer.
 }

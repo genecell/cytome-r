@@ -34,10 +34,78 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cytome_decode_values
+NumericVector cytome_decode_values(RawVector blob, std::string compression, std::string dtype, double n, std::string what);
+RcppExport SEXP _cytome_cytome_decode_values(SEXP blobSEXP, SEXP compressionSEXP, SEXP dtypeSEXP, SEXP nSEXP, SEXP whatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RawVector >::type blob(blobSEXP);
+    Rcpp::traits::input_parameter< std::string >::type compression(compressionSEXP);
+    Rcpp::traits::input_parameter< std::string >::type dtype(dtypeSEXP);
+    Rcpp::traits::input_parameter< double >::type n(nSEXP);
+    Rcpp::traits::input_parameter< std::string >::type what(whatSEXP);
+    rcpp_result_gen = Rcpp::wrap(cytome_decode_values(blob, compression, dtype, n, what));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cytome_decode_index
+IntegerVector cytome_decode_index(RawVector blob, std::string compression, double n, double upper, std::string what);
+RcppExport SEXP _cytome_cytome_decode_index(SEXP blobSEXP, SEXP compressionSEXP, SEXP nSEXP, SEXP upperSEXP, SEXP whatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RawVector >::type blob(blobSEXP);
+    Rcpp::traits::input_parameter< std::string >::type compression(compressionSEXP);
+    Rcpp::traits::input_parameter< double >::type n(nSEXP);
+    Rcpp::traits::input_parameter< double >::type upper(upperSEXP);
+    Rcpp::traits::input_parameter< std::string >::type what(whatSEXP);
+    rcpp_result_gen = Rcpp::wrap(cytome_decode_index(blob, compression, n, upper, what));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cytome_decode_sparse
+List cytome_decode_sparse(RawVector data, RawVector indices, RawVector indptr, std::string compression, std::string dtype, int n_major, double n_minor, std::string what);
+RcppExport SEXP _cytome_cytome_decode_sparse(SEXP dataSEXP, SEXP indicesSEXP, SEXP indptrSEXP, SEXP compressionSEXP, SEXP dtypeSEXP, SEXP n_majorSEXP, SEXP n_minorSEXP, SEXP whatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RawVector >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< RawVector >::type indices(indicesSEXP);
+    Rcpp::traits::input_parameter< RawVector >::type indptr(indptrSEXP);
+    Rcpp::traits::input_parameter< std::string >::type compression(compressionSEXP);
+    Rcpp::traits::input_parameter< std::string >::type dtype(dtypeSEXP);
+    Rcpp::traits::input_parameter< int >::type n_major(n_majorSEXP);
+    Rcpp::traits::input_parameter< double >::type n_minor(n_minorSEXP);
+    Rcpp::traits::input_parameter< std::string >::type what(whatSEXP);
+    rcpp_result_gen = Rcpp::wrap(cytome_decode_sparse(data, indices, indptr, compression, dtype, n_major, n_minor, what));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cytome_decode_fragments
+List cytome_decode_fragments(RawVector starts, RawVector ends, RawVector cells, std::string compression, int encoding, std::string what);
+RcppExport SEXP _cytome_cytome_decode_fragments(SEXP startsSEXP, SEXP endsSEXP, SEXP cellsSEXP, SEXP compressionSEXP, SEXP encodingSEXP, SEXP whatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RawVector >::type starts(startsSEXP);
+    Rcpp::traits::input_parameter< RawVector >::type ends(endsSEXP);
+    Rcpp::traits::input_parameter< RawVector >::type cells(cellsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type compression(compressionSEXP);
+    Rcpp::traits::input_parameter< int >::type encoding(encodingSEXP);
+    Rcpp::traits::input_parameter< std::string >::type what(whatSEXP);
+    rcpp_result_gen = Rcpp::wrap(cytome_decode_fragments(starts, ends, cells, compression, encoding, what));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_cytome_cytome_decompress", (DL_FUNC) &_cytome_cytome_decompress, 2},
     {"_cytome_cytome_compress", (DL_FUNC) &_cytome_cytome_compress, 2},
+    {"_cytome_cytome_decode_values", (DL_FUNC) &_cytome_cytome_decode_values, 5},
+    {"_cytome_cytome_decode_index", (DL_FUNC) &_cytome_cytome_decode_index, 5},
+    {"_cytome_cytome_decode_sparse", (DL_FUNC) &_cytome_cytome_decode_sparse, 8},
+    {"_cytome_cytome_decode_fragments", (DL_FUNC) &_cytome_cytome_decode_fragments, 6},
     {NULL, NULL, 0}
 };
 

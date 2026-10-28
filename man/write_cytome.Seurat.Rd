@@ -24,19 +24,30 @@
 
 \item{path}{Output `.cytome` path.}
 
-\item{assay}{Assay for the main modality (default the object's default assay).}
+\item{assay}{Assay for the main modality (default the object's default assay).
+It must be one cytome has a feature table for (RNA, GA, ATAC, tiles).}
 
-\item{layer}{Layer/slot to store (default `"counts"`).}
+\item{layer}{Layer/slot to store (default `"counts"`). The split layers of a
+Seurat v5 assay (`counts.A`, `counts.B`, ...) are joined.}
 
 \item{alt_assays}{Other assays to write as extra modalities. `NULL` (default)
-writes all of them; `character(0)` writes none.}
+writes every one cytome has a feature table for and names the others (SCT,
+ADT, ...) in a warning; naming one that cannot be written is an error.
+`character(0)` writes none. An assay over only some of the object's cells
+is not written, with a warning; the main assay must cover them all.}
 
 \item{layers}{Other layers of the main assay (`data`, `scale.data`) to
 carry. `FALSE` (default), `TRUE`, or name them. See the
-`SingleCellExperiment` method for why this is off by default.}
+`SingleCellExperiment` method for why this is off by default. A layer over
+only some of the features, such as a `scale.data` over the variable genes,
+is not written: a warning names it, and it is recomputed after reading, with
+`ScaleData()` (`SCTransform()` for an SCT assay). Nor is a layer over only
+some of the cells.}
 
-\item{graphs}{Write the `graphs` slot to the shared `graph_edges` table
-(default `TRUE`).}
+\item{graphs}{Write the `graphs` slot as the Python package stores graphs
+(default `TRUE`). A graph over only some of the cells is not written, with
+a warning: a reader would take a cell it lacks for a cell without
+neighbours.}
 
 \item{dtype, chunk_size, compression, embeddings}{As for the
 `SingleCellExperiment` method.}

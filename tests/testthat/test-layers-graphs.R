@@ -1,7 +1,8 @@
 # Layers and graphs. Both were "no" in the transfer table; neither was a
 # format limitation. Layers are opt-in because an archive and a handoff want
 # opposite things; graphs are on by default because recomputing a KNN graph on
-# millions of cells is the expensive part.
+# millions of cells is the expensive part. Graphs are written as the Python
+# package writes them (graph_meta / graph_chunks).
 
 ## colPair<- wants a SelfHits with integer from/to, not a sparse matrix.
 .hits <- function(G, n) {
@@ -55,7 +56,7 @@ test_that("naming a layer that does not exist says which, and what does", {
                "no such layer")
 })
 
-test_that("an SCE colPair round-trips through graph_edges", {
+test_that("an SCE colPair round-trips", {
   skip_if_not_installed("SingleCellExperiment")
   sce <- .mini_sce()
   n <- ncol(sce)

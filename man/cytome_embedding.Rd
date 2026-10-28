@@ -12,8 +12,10 @@ cytome_embedding(x, name)
 \item{name}{Embedding name, e.g. `"X_umap"` (see [cytome_embeddings()]).}
 }
 \value{
-A numeric matrix (cells x n_cols) with cell barcodes as row names when available.
+A numeric matrix (rows x n_cols) with the entity's identifiers (cell barcodes for
+  a cell embedding) as row names when they are available.
 }
 \description{
-Embeddings are stored as dense, row-major, compressed chunks (`dense_chunks`).
+Embeddings are stored as dense, row-major, compressed chunks (`dense_chunks`), in any
+numeric dtype (a Visium `spatial` embedding is int64).
 }

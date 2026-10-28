@@ -16,71 +16,23 @@
 
 ## Chunk-aligned extraction.
 ##
-## The stored matrix is cells x features and is chunked along CELLS; the seed
-## presents features x cells, so a viewport's COLUMN range is what selects
-## chunks. Read only the chunks that overlap it -- the previous version read
-## the whole matrix and then subset, which made peak memory the full matrix
-## plus the block, i.e. strictly worse than loading it once. That is the
-## difference between a lazy wrapper and an out-of-core backend.
-##
-## Chunk k covers 1-based stored rows (row_start + 1):row_end.
+## The stored matrix is cells x features; the seed presents features x cells.
+## A row-major matrix is chunked along cells, so a viewport's column range
+## selects its chunks; a column-major one (PIASO's ATAC and tiles matrices) is
+## chunked along features, so the row range does. Only the chunks overlapping
+## the request are read (.extract_block() in read_matrix.R), and the block is
+## assembled in time linear in the values read: the previous version grew its
+## output with c() once per requested cell, quadratic in the cells of a block.
 
 .cytome_seed_extract <- function(x, index) {
-  i <- index[[1L]]                                   # features (stored columns)
-  j <- index[[2L]]                                   # cells    (stored rows)
-  n_features <- x@dim[1L]; n_cells <- x@dim[2L]
-  want <- if (is.null(j)) seq_len(n_cells) else as.integer(j)
-
   h <- cytome_open(x@path)
   on.exit(cytome_close(h))
-  dtype <- DBI::dbGetQuery(h$con,
-    "SELECT dtype FROM matrix_meta WHERE matrix_name = ?",
-    params = list(x@matrix_name))$dtype[1]
-  cm <- .chunk_meta(h, x@matrix_name)
-
-  empty <- Matrix::sparseMatrix(i = integer(0), j = integer(0), x = numeric(0),
-                                dims = c(n_features, length(want)))
-  if (!nrow(cm) || !length(want)) return(.subset_features(empty, i))
-
-  ## Only the chunks whose row span intersects the requested cells. Pulled out
-  ## so the selectivity itself can be asserted in a test -- "we read fewer
-  ## chunks" is the whole claim, and it is not observable from the values.
-  hit <- .cytome_chunks_for(cm, want)
-  if (!length(hit)) return(.subset_features(empty, i))
-
-  parts <- lapply(hit, function(ci)
-    .read_chunk_triplets(h, x@matrix_name, ci, dtype))
-  gi <- unlist(lapply(parts, `[[`, "i"), use.names = FALSE)   # global cell, 1-based
-  gj <- unlist(lapply(parts, `[[`, "j"), use.names = FALSE)   # feature, 1-based
-  gx <- unlist(lapply(parts, `[[`, "x"), use.names = FALSE)
-
-  ## Map global cell -> position in `want`. A cell can be asked for more than
-  ## once (DelayedArray permits repeated subscripts), so build the output by
-  ## expanding rather than by a single match().
-  keep <- gi %in% want
-  gi <- gi[keep]; gj <- gj[keep]; gx <- gx[keep]
-  idx_by_cell <- split(seq_along(gi), gi)
-  out_i <- integer(0); out_j <- integer(0); out_x <- numeric(0)
-  for (n in seq_along(want)) {
-    sel <- idx_by_cell[[as.character(want[n])]]
-    if (is.null(sel)) next
-    out_i <- c(out_i, gj[sel])                       # feature -> seed row
-    out_j <- c(out_j, rep.int(n, length(sel)))       # position -> seed column
-    out_x <- c(out_x, gx[sel])
-  }
-  M <- Matrix::sparseMatrix(i = out_i, j = out_j, x = out_x,
-                            dims = c(n_features, length(want)))
-  .subset_features(M, i)
+  .extract_block(h, .matrix_info(h, x@matrix_name), cells = index[[2L]], features = index[[1L]])
 }
 
-.subset_features <- function(M, i) if (is.null(i)) M else M[i, , drop = FALSE]
-
-## Chunk k covers 1-based stored rows (row_start + 1):row_end. Returns the
-## chunk_idx values whose span contains at least one requested cell.
-.cytome_chunks_for <- function(cm, want) {
-  if (!nrow(cm) || !length(want)) return(integer(0))
-  cm$chunk_idx[vapply(seq_len(nrow(cm)), function(k)
-    any(want > cm$row_start[k] & want <= cm$row_end[k]), logical(1))]
+## Seeds saved before the layout slot existed hold row-major matrices.
+.seed_layout <- function(x) {
+  if (methods::.hasSlot(x, "layout") && length(x@layout)) x@layout else "csr"
 }
 
 .register_cytome_delayed <- function(pkg_env) {
@@ -88,7 +40,8 @@
 
   methods::setClass("CytomeArraySeed",
     slots = c(path = "character", matrix_name = "character",
-              dim = "integer", dimnames = "list", chunk_size = "integer"),
+              dim = "integer", dimnames = "list", chunk_size = "integer",
+              layout = "character"),
     where = pkg_env)
 
   methods::setMethod("dim", "CytomeArraySeed", function(x) x@dim, where = pkg_env)
@@ -96,12 +49,17 @@
   methods::setMethod(S4Arrays::is_sparse, "CytomeArraySeed",
                      function(x) TRUE, where = pkg_env)
   ## Without chunkdim() the default block grid straddles storage chunks, so a
-  ## single block pulls two chunks and every chunk is read twice.
+  ## single block pulls two chunks and every chunk is read twice. A row-major
+  ## matrix is chunked along cells (seed columns), a column-major one along
+  ## features (seed rows).
   methods::setMethod(DelayedArray::chunkdim, "CytomeArraySeed",
                      ## clamped: a cytome written with chunk_size 2000 but
                      ## holding 12 cells would otherwise report a chunk larger
                      ## than the array, which DelayedArray rejects.
-                     function(x) c(x@dim[1L], min(x@chunk_size, x@dim[2L])),
+                     function(x) {
+                       if (.seed_layout(x) == "csc") c(min(x@chunk_size, x@dim[1L]), x@dim[2L])
+                       else c(x@dim[1L], min(x@chunk_size, x@dim[2L]))
+                     },
                      where = pkg_env)
   methods::setMethod(S4Arrays::extract_array, "CytomeArraySeed",
                      function(x, index) as.matrix(.cytome_seed_extract(x, index)),
@@ -170,22 +128,22 @@ cytome_delayed <- function(path, matrix_name) {
   if (!matrix_name %in% meta$matrix_name)
     stop("cytome: matrix '", matrix_name, "' not found; have: ",
          paste(meta$matrix_name, collapse = ", "))
-  row <- meta[meta$matrix_name == matrix_name, , drop = FALSE]
-  ## cytome_matrices() does not select chunk_size, and as.integer(NULL) is
-  ## integer(0) -- which made chunkdim() return a length-1 vector and
-  ## DelayedArray reject the seed. Ask matrix_meta directly.
-  chunk_size <- as.integer(DBI::dbGetQuery(x$con,
-    "SELECT chunk_size FROM matrix_meta WHERE matrix_name = ?",
-    params = list(matrix_name))$chunk_size[1])
-  if (is.na(chunk_size) || !length(chunk_size) || chunk_size < 1L)
-    chunk_size <- as.integer(row$n_rows[1])
+  info <- .matrix_info(x, matrix_name)
+  .check_chunks_present(info, .chunk_index(x, info))
+  ## The extent of a storage chunk along its axis: cells for a row-major
+  ## matrix, features for a column-major one. as.integer(NULL) is integer(0),
+  ## which made chunkdim() return a length-1 vector and DelayedArray reject the
+  ## seed, so a missing size falls back to the whole axis.
+  extent <- if (info$layout == "csc") info$n_cols else info$n_rows
+  chunk_size <- info$chunk_size
+  if (!length(chunk_size) || is.na(chunk_size) || chunk_size < 1L) chunk_size <- as.integer(extent)
   var <- cytome_var(x, matrix_name)
   obs <- cytome_obs(x, "cells")
   ## Stored cells x features; the seed presents features x cells.
   seed <- methods::new("CytomeArraySeed",
                        path = normalizePath(path), matrix_name = matrix_name,
-                       dim = c(as.integer(row$n_cols[1]), as.integer(row$n_rows[1])),
-                       dimnames = list(.feature_ids(var), .cell_ids(obs)),
-                       chunk_size = chunk_size)
+                       dim = c(info$n_cols, info$n_rows),
+                       dimnames = list(.feature_ids(var), .cell_names(x, obs)),
+                       chunk_size = chunk_size, layout = info$layout)
   DelayedArray::DelayedArray(seed)
 }

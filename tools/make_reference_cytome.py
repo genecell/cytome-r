@@ -57,6 +57,12 @@ import sqlite3
 rows = ds._conn.execute("SELECT matrix_name, compression FROM matrix_chunks GROUP BY matrix_name, compression").fetchall()
 print("matrix compressions:", rows)
 ds.close()
+# Leave WAL mode: the file ships inside the installed package, and reading a WAL-mode file
+# makes SQLite write -wal and -shm files beside it (or fail where the folder is read-only).
+_c = sqlite3.connect(CYT)
+_c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+_c.execute("PRAGMA journal_mode=DELETE")
+_c.close()
 
 # expected CSVs (R reads these and compares)
 pd.DataFrame(rna, index=cells.barcode, columns=genes.gene_id).to_csv(f"{OUT}/expected_rna.csv")

@@ -2,9 +2,12 @@
 % Please edit documentation in R/write_cytome.R
 \name{write_cytome}
 \alias{write_cytome}
+\alias{write_cytome.default}
 \title{Write an object to a `.cytome` file}
 \usage{
 write_cytome(x, path, ...)
+
+\method{write_cytome}{default}(x, path, ...)
 }
 \arguments{
 \item{x}{A `Seurat` or `SingleCellExperiment` object.}
@@ -21,6 +24,23 @@ Generic. The method is chosen from the class of `x`, so the same call works
 whether you are holding a Seurat object or a SingleCellExperiment -- the
 thing you would otherwise have to look up is the thing R already knows.
 Third-party packages can add methods for their own classes.
+}
+\details{
+The store is built in a temporary file beside `path`, in one transaction,
+and moves to `path` only once it is complete: a write that fails leaves an
+existing file as it was. Values are placed by feature and cell names, so a
+matrix whose genes or cells come in another order is stored under its own.
+Column types travel: factors with their levels, logicals and integers.
+
+cytome never stores values that were not measured. A layer over only some
+of the genes (a Seurat `scale.data` over the variable genes) is not written,
+with a warning that names it: stored over all the genes, the zeros of the
+genes it lacks would read as values, and in `scale.data` 0 is the mean.
+Recompute it after reading, with `ScaleData()`. An assay, layer or graph
+over only some of the cells (an assay measured in some batches only) is not
+written either, with a warning that names it: to keep it, subset the object
+to those cells and write that as a separate store. An embedding keeps `NaN`
+for the cells it lacks.
 }
 \examples{
 \dontrun{

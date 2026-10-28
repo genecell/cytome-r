@@ -9,6 +9,10 @@ cytome_info(x)
 \arguments{
 \item{x}{A `cytome` handle.}
 }
+\value{
+A list: `path`, `n_cells`, `matrices` (as [cytome_matrices()]), `embeddings`
+  (names) and `tables` (the SQLite tables of the store).
+}
 \description{
 High-level summary of a cytome
 }

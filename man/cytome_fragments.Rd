@@ -2,7 +2,7 @@
 % Please edit documentation in R/fragments.R
 \name{cytome_fragments}
 \alias{cytome_fragments}
-\title{Query ATAC fragments overlapping a genomic interval}
+\title{Query ATAC fragments on a chromosome, optionally within an interval}
 \usage{
 cytome_fragments(x, chrom, start = NULL, end = NULL, with_barcode = TRUE)
 }
@@ -11,16 +11,24 @@ cytome_fragments(x, chrom, start = NULL, end = NULL, with_barcode = TRUE)
 
 \item{chrom}{Chromosome, e.g. `"chr1"`.}
 
-\item{start, end}{Optional 0-based half-open interval `[start, end)`. If both `NULL`, returns
-all fragments on `chrom`.}
+\item{start, end}{Optional 0-based half-open interval `[start, end)`. Give both, or neither
+for every fragment on `chrom`.}
 
 \item{with_barcode}{If `TRUE` (default), join `cell_idx` to the cell `barcode`.}
 }
 \value{
-A data.frame: chrom, start, end, cell_idx, [barcode], dup_count.
+A data.frame: chrom, start, end, cell_idx, dup_count and, with `with_barcode`,
+  barcode, ordered by start, end and cell. `dup_count` is `NA` for fragments stored in
+  chunks, which do not keep it.
 }
 \description{
-Fragments are stored per chromosome in `fragments_<chrom>` tables (columns
-`start, end_, cell_idx, dup_count`) with an SQLite R*-tree index, so interval queries
-are fast and native — no Python.
+Fragments are stored in one of two forms, and both are read:
+* compressed chunks (`fragment_chunks`), written by PIASO's importer and the Python
+  package's streaming import, and the only form `subset()` and `filter_cells()` keep;
+* one row per fragment in `fragments_<chrom>` tables (columns
+  `start, end_, cell_idx, dup_count`), written by the older Python import.
+}
+\details{
+A chunk holds about half a million fragments sorted by start. An interval query decodes
+only the chunks that start before its end, one at a time, as the Python reader does.
 }

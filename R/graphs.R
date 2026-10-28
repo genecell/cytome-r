@@ -1,9 +1,10 @@
 #' Graphs stored in a cytome
 #'
-#' Lists the cell-by-cell graphs of a store, in either form the Python package
+#' Lists the cell-by-cell graphs of a store, in every form the Python package
 #' writes: compressed row chunks (`graph_meta` / `graph_chunks`, cytome 0.3.6
-#' and later), and one row per edge (`graph_edges`, earlier versions and this
-#' package's own writer).
+#' and later), one row per edge (`graph_edges`, earlier versions and the R
+#' writer before cytome R 0.1.4), and the legacy `graph_knn` table (as `"knn"`).
+#' Graphs over features (`axis = 'var'`) are not listed.
 #'
 #' @param x A `cytome` handle.
 #' @return A character vector of graph names.
@@ -14,9 +15,16 @@ cytome_graphs <- function(x) {
     names <- DBI::dbGetQuery(x$con,
       "SELECT graph_name FROM graph_meta WHERE axis = 'obs'")$graph_name
   if (.has_table(x, "graph_edges"))
-    names <- c(names, DBI::dbGetQuery(x$con,
-      "SELECT DISTINCT graph_name FROM graph_edges")$graph_name)
+    names <- c(names, DBI::dbGetQuery(x$con, paste(
+      "SELECT DISTINCT graph_name FROM graph_edges",
+      if ("axis" %in% .table_columns(x, "graph_edges")) "WHERE axis = 'obs'" else ""))$graph_name)
+  if (.has_knn_table(x)) names <- c(names, "knn")
   sort(unique(as.character(names)))
+}
+
+.has_knn_table <- function(x) {
+  .has_table(x, "graph_knn") &&
+    nrow(DBI::dbGetQuery(x$con, "SELECT 1 FROM graph_knn LIMIT 1")) > 0
 }
 
 #' Read one graph as a sparse matrix
@@ -30,18 +38,22 @@ cytome_graphs <- function(x) {
 cytome_graph <- function(x, name, n = NULL) {
   meta <- .graph_meta(x, name)
   if (!is.null(meta)) return(.read_graph_chunks(x, name, meta, n))
-  if (!.has_table(x, "graph_edges"))
-    stop("cytome: graph '", name, "' not found; have: ",
-         paste(cytome_graphs(x), collapse = ", "))
-  e <- DBI::dbGetQuery(x$con,
-    "SELECT row_idx, col_idx, value FROM graph_edges WHERE graph_name = ?",
-    params = list(name))
-  if (!nrow(e)) stop("cytome: graph '", name, "' not found; have: ",
-                     paste(cytome_graphs(x), collapse = ", "))
-  if (is.null(n)) n <- nrow(cytome_obs(x, "cells"))
+  e <- if (.has_table(x, "graph_edges"))
+    DBI::dbGetQuery(x$con, paste(
+      "SELECT row_idx, col_idx, value FROM graph_edges WHERE graph_name = ?",
+      if ("axis" %in% .table_columns(x, "graph_edges")) "AND axis = 'obs'" else ""),
+      params = list(name))
+  if ((is.null(e) || !nrow(e)) && name == "knn" && .has_knn_table(x))
+    e <- DBI::dbGetQuery(x$con,
+      "SELECT cell_i AS row_idx, cell_j AS col_idx, weight AS value FROM graph_knn")
+  if (is.null(e) || !nrow(e)) stop("cytome: graph '", name, "' not found; have: ",
+                                   paste(cytome_graphs(x), collapse = ", "))
+  if (is.null(n)) n <- DBI::dbGetQuery(x$con, "SELECT COUNT(*) AS n FROM cells")$n
+  if (max(e$row_idx, e$col_idx) >= n)
+    stop("cytome: graph '", name, "' has edges past cell ", n)
   ## stored 0-based, as Python writes them
-  Matrix::sparseMatrix(i = e$row_idx + 1L, j = e$col_idx + 1L, x = e$value,
-                       dims = c(n, n))
+  Matrix::sparseMatrix(i = as.integer(e$row_idx) + 1L, j = as.integer(e$col_idx) + 1L,
+                       x = as.numeric(e$value), dims = c(n, n))
 }
 
 ## The chunked form's shape, entry count and value type, or NULL when the
@@ -66,17 +78,16 @@ cytome_graph <- function(x, name, n = NULL) {
     n_rows <- n_cols <- as.integer(n)
   }
   ch <- DBI::dbGetQuery(x$con,
-    "SELECT row_start, row_end, data_blob, indices_blob, indptr_blob, compression
+    "SELECT chunk_idx, row_start, row_end, data_blob, indices_blob, indptr_blob, compression
        FROM graph_chunks WHERE graph_name = ? AND axis = 'obs' ORDER BY chunk_idx",
     params = list(name))
   dtype <- meta$dtype[1]
   parts <- lapply(seq_len(nrow(ch)), function(k) {
-    comp <- ch$compression[k]
-    ptr <- .read_ints(cytome_decompress(ch$indptr_blob[[k]], comp), 8L)
-    rows <- seq_len(ch$row_end[k] - ch$row_start[k]) + ch$row_start[k]   # 1-based
-    list(i = rep.int(rows, diff(ptr)),
-         j = .read_ints(cytome_decompress(ch$indices_blob[[k]], comp)) + 1L,
-         x = .read_floats(cytome_decompress(ch$data_blob[[k]], comp), dtype))
+    r0 <- as.integer(ch$row_start[k]); nr <- as.integer(ch$row_end[k]) - r0
+    d <- cytome_decode_sparse(ch$data_blob[[k]], ch$indices_blob[[k]], ch$indptr_blob[[k]],
+                              .comp(ch$compression[k]), dtype, nr, as.integer(meta$n_cols[1]),
+                              sprintf("graph %s chunk %d", name, as.integer(ch$chunk_idx[k])))
+    list(i = rep.int(seq_len(nr) + r0, diff(d$p)), j = d$i + 1L, x = d$x)
   })
   i <- unlist(lapply(parts, `[[`, "i"), use.names = FALSE)
   j <- unlist(lapply(parts, `[[`, "j"), use.names = FALSE)

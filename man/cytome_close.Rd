@@ -9,6 +9,9 @@ cytome_close(x)
 \arguments{
 \item{x}{A `cytome` handle from [cytome_open()].}
 }
+\value{
+`NULL`, invisibly.
+}
 \description{
 Close a cytome handle
 }
